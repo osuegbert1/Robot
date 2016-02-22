@@ -93,12 +93,15 @@ int main(){
 //int main(){
 //    while(true){
 //        if(buttons.MiddlePressed()){
+//            LCD.Write("CDS cell: ");
+//            LCD.WriteLiine(CDScell.Value());
 //            LCD.Write("Left: ");
 //            LCD.WriteLine(leftSensor.Value());
 //            LCD.Write("Middle: ");
 //            LCD.WriteLine(middleSensor.Value());
 //            LCD.Write("Right: ");
 //            LCD.WriteLine(rightSensor.Value());
+//            while(!buttons.MiddlePressed()){}
 //        }
 //    }
 //}
