@@ -70,7 +70,7 @@ void shaftEncodingTurn(int leftPercent, int rightPercent, int counts)
     //Reset encoder counts
     clearCounts();
 
-    //Set both motors to desiRED_LIGHT percent
+    //Set both motors to desired percent
     right_motor.SetPercent(rightPercent);
     left_motor.SetPercent(leftPercent);
 
