@@ -49,7 +49,7 @@ int updateCount() {
     return (abs(left_encoder.Counts()) + abs(right_encoder.Counts())) / 2.0;
 }
 
-void shaftEncodingStrait(int percent, int counts)
+void shaftEncodingStraight(int percent, int counts)
 {
     //Reset encoder counts
     clearCounts();
@@ -130,7 +130,7 @@ int main(void) {
 //    while(!buttons.MiddlePressed()){}
 //    while(buttons.MiddlePressed()){}
 
-    shaftEncodingStrait(ENCODING_SPEED, 450);
+    shaftEncodingStraight(ENCODING_SPEED, 450);
     shaftEncodingTurn(-1*ENCODING_SPEED,ENCODING_SPEED,TURN_90_COUNTS);
 
     clearCounts();
