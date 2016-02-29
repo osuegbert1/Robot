@@ -21,7 +21,7 @@ DigitalEncoder left_encoder(FEHIO::P0_0);
 #define MIDDLE_THRESHOLD 1.5
 #define RIGHT_THRESHOLD 1.5
 #define TURN_90_COUNTS 700
-#define ENCODING_SPEED 25
+#define ENCODING_SPEED 35
 #define RED_BLUE_THRESHOLD .59
 #define NO_LIGHT_THRESHOLD 1.0
 #define RED_LIGHT 1
@@ -30,7 +30,7 @@ DigitalEncoder left_encoder(FEHIO::P0_0);
 
 void drive(int percent){
     right_motor.SetPercent(percent);
-    left_motor.SetPercent(-1*(1+percent));
+    left_motor.SetPercent(1+percent);
 }
 
 void stop() {
@@ -64,7 +64,7 @@ void shaftEncodingStraight(int percent, int counts)
     }
 
     //Turn off motors
-    stop();
+    //stop();
 }
 
 void shaftEncodingTurn(int leftPercent, int rightPercent, int counts)
@@ -74,7 +74,7 @@ void shaftEncodingTurn(int leftPercent, int rightPercent, int counts)
 
     //Set both motors to desired percent
     right_motor.SetPercent(rightPercent);
-    left_motor.SetPercent(-1*leftPercent);
+    left_motor.SetPercent(leftPercent);
 
     //While the average of the left and right encoder are less than counts,
     //keep running motors
@@ -94,15 +94,15 @@ bool onLine() {
 void followLine() {
     if(leftSensor.Value()<LEFT_THRESHOLD){
         right_motor.SetPercent(FASTER);
-        left_motor.SetPercent(-1*SLOWER);
+        left_motor.SetPercent(SLOWER);
     }
     if(rightSensor.Value()<RIGHT_THRESHOLD){
         right_motor.SetPercent(SLOWER);
-        left_motor.SetPercent(-1*FASTER);
+        left_motor.SetPercent(FASTER);
     }
     if(middleSensor.Value()<MIDDLE_THRESHOLD){
         right_motor.SetPercent(SLOWER);
-        left_motor.SetPercent(-1*SLOWER);
+        left_motor.SetPercent(SLOWER);
     }
 }
 
@@ -126,13 +126,26 @@ int main(void) {
     LCD.Clear(FEHLCD::Black);
     LCD.SetFontColor(FEHLCD::White);
 
+    int counts = 500;
     while(true){
-    while(!buttons.MiddlePressed()){}
-    while(buttons.MiddlePressed()){}
+        while(!buttons.MiddlePressed()){}
+        while(buttons.MiddlePressed()){}
+        drive(80);
 
-    shaftEncodingStraight(ENCODING_SPEED,900);
-    while(!buttons.MiddlePressed()){}
-    while(buttons.MiddlePressed()){}
-    shaftEncodingTurn(-1*ENCODING_SPEED,ENCODING_SPEED,TURN_90_COUNTS);
+
+        //shaftEncodingTurn(-1*ENCODING_SPEED,ENCODING_SPEED,counts);
+        while(!buttons.MiddlePressed()){
+            if (buttons.LeftPressed()){
+                counts--;
+                LCD.WriteLine(counts);
+                Sleep(.2);
+            }
+            if (buttons.RightPressed()){
+                counts++;
+                LCD.WriteLine(counts);
+                Sleep(.5);
+            }
+        }
     }
 }
+
