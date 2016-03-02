@@ -229,13 +229,12 @@ void check_heading(float heading) //using RPS
                 turnLeft(13);
                 Sleep(.2);
                 stop();
-            }
-            else {
+            } else {
                 turnRight(13);
                 Sleep(.2);
                 stop();
             }
-        }else {
+        } else {
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
@@ -279,7 +278,6 @@ int main(void)
     move_forward(20,240);
     check_y_minus(13.5);
     SD.Printf("%f, %f\n", RPS.X(), RPS.Y());
-
 
     SD.CloseLog();
     return 0;
