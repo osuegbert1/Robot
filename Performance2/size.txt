@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  43756	   3420	   4516	  51692	   c9ec	../Performance2.elf
