@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  41996	   3420	   4516	  49932	   c30c	../Cheating.elf

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 DigitalInputPin frontLeftBump(FEHIO::P2_3);
-DigitalInputPin frontRightBump(FEHIO::P2_2);
+DigitalInputPin frontRightBump(FEHIO::P0_4);
 DigitalInputPin backLeftBump(FEHIO::P2_2);
 DigitalInputPin backRightBump(FEHIO::P0_3);
 AnalogInputPin CDScell(FEHIO::P2_0);
@@ -65,61 +65,44 @@ void clearCounts() {
 }
 
 int updateCount() {
-    return (abs(left_encoder.Counts()) + abs(right_encoder.Counts())) / 2.0;
+    return (left_encoder.Counts() + right_encoder.Counts()) / 2.0;
 }
 
 void shaftEncodingStraight(int percent, double distance)
 {
     int counts = 318*distance/(2.5*3.1415);
-    //Reset encoder counts
-    clearCounts();
 
-    //Set both motors to desiRED_LIGHT percent
+    clearCounts();
     drive(percent);
 
-    //While the average of the left and right encoder are less than counts,
-    //keep running motors
     while(updateCount() < counts){
         LCD.WriteLine(updateCount());
     }
 
-    //Turn off motors
     stop();
 }
 
 void shaftEncodingTurnLeft(int percent, int counts)
 {
-    //Reset encoder counts
     clearCounts();
-
-    //Set both motors to desired percent
     turnLeft(percent);
 
-    //While the average of the left and right encoder are less than counts,
-    //keep running motors
     while(updateCount() < counts){
         LCD.WriteLine(updateCount());
     }
 
-    //Turn off motors
     stop();
 }
 
 void shaftEncodingTurnRight(int percent, int counts)
 {
-    //Reset encoder counts
     clearCounts();
-
-    //Set both motors to desired percent
     turnRight(percent);
 
-    //While the average of the left and right encoder are less than counts,
-    //keep running motors
     while(updateCount() < counts){
         LCD.WriteLine(updateCount());
     }
 
-    //Turn off motors
     stop();
 }
 
@@ -177,7 +160,6 @@ void printLight(){
 /*RPS*/
 void check_x_plus(float x_coordinate) //using RPS while robot is in the +x direction
 {
-    //check whether the robot is within an acceptable range
     while(RPS.X() < x_coordinate - .5 || RPS.X() > x_coordinate + .5)
     {
         LCD.Write("X-Coor: ");
@@ -199,23 +181,18 @@ void check_x_plus(float x_coordinate) //using RPS while robot is in the +x direc
 
 void check_y_minus(float y_coordinate) //using RPS while robot is in the -y direction
 {
-    //check whether the robot is within an acceptable range
     while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5)
     {
         LCD.Write("Y-Coor: ");
         LCD.WriteLine(RPS.Y());
         if(RPS.Y() > y_coordinate)
         {
-            //pulse the motors for a short duration in the correct direction
-
             drive(12);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
         else if(RPS.Y() < y_coordinate)
         {
-            //pulse the motors for a short duration in the correct direction
-
             drive(-12);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
@@ -225,23 +202,18 @@ void check_y_minus(float y_coordinate) //using RPS while robot is in the -y dire
 
 void check_y_plus(float y_coordinate) //using RPS while robot is in the +y direction
 {
-    //check whether the robot is within an acceptable range
-    while(RPS.Y() < y_coordinate - 1 || RPS.Y() > y_coordinate + 1)
+    while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5)
     {
         LCD.Write("Y-Coor: ");
         LCD.WriteLine(RPS.Y());
         if(RPS.Y() > y_coordinate)
         {
-            //pulse the motors for a short duration in the correct direction
-
             drive(-12);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
         else if(RPS.Y() < y_coordinate)
         {
-            //pulse the motors for a short duration in the correct direction
-
             drive(12);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
@@ -251,21 +223,18 @@ void check_y_plus(float y_coordinate) //using RPS while robot is in the +y direc
 
 void check_heading(float heading) //using RPS
 {
-    //you will need to fill out this one yourself and take into account
-    //the edge conditions (when you want the robot to go to 0 degrees
-    //or close to 0 degrees)
     double startPoint = RPS.Heading();
 
-    while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+    while(RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5){
         if (heading - startPoint > 0 ){
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (heading-startPoint < 180){
-                turnLeft(10);
+                turnLeft(9);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             } else {
-                turnRight(10);
+                turnRight(9);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -273,11 +242,11 @@ void check_heading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
-                turnRight(10);
+                turnRight(9);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }else {
-                turnLeft(10);
+                turnLeft(9);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -292,6 +261,7 @@ void goToX(double xCoord, int percent) {
         LCD.Write("X Coord: ");
         LCD.WriteLine(RPS.X());
     }
+    stop();
 }
 
 void goToY(double yCoord, int percent) {
@@ -300,6 +270,7 @@ void goToY(double yCoord, int percent) {
         LCD.Write("Y Coord: ");
         LCD.WriteLine(RPS.Y());
     }
+    stop();
 }
 
 int main(void) {
@@ -347,7 +318,7 @@ int main(void) {
             followLine();
         }
         else {
-            drive(12);
+            drive(15);
         }
     }
     stop();
@@ -373,7 +344,7 @@ int main(void) {
             followLine();
         }
         else {
-            drive(12);
+            drive(15);
         }
     }
     stop();

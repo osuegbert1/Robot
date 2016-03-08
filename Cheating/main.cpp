@@ -5,14 +5,14 @@
 #include <FEHRPS.h>
 #include <stdlib.h>
 
-DigitalInputPin frontLeftBump(FEHIO::P2_1);
-DigitalInputPin frontRightBump(FEHIO::P2_2);
-DigitalInputPin backLeftBump(FEHIO::P2_3);
-DigitalInputPin backRightBump(FEHIO::P2_4);
+DigitalInputPin frontLeftBump(FEHIO::P2_3);
+DigitalInputPin frontRightBump(FEHIO::P0_4);
+DigitalInputPin backLeftBump(FEHIO::P2_2);
+DigitalInputPin backRightBump(FEHIO::P0_3);
 AnalogInputPin CDScell(FEHIO::P2_0);
-AnalogInputPin leftSensor(FEHIO::P1_0);
+AnalogInputPin leftSensor(FEHIO::P1_2);
 AnalogInputPin middleSensor(FEHIO::P1_1);
-AnalogInputPin rightSensor(FEHIO::P1_2);
+AnalogInputPin rightSensor(FEHIO::P1_0);
 FEHMotor right_motor(FEHMotor::Motor1,12.0);
 FEHMotor left_motor(FEHMotor::Motor0,12.0);
 ButtonBoard buttons(FEHIO::Bank3);
@@ -308,14 +308,23 @@ int main(void) {
     LCD.Write("Heading: ");
     LCD.WriteLine(RPS.Heading());
 
+        while(senseLight() == NO_LIGHT){
+            LCD.WriteLine(senseLight());
+        }
+
+    drive(30);
+    while(frontLeftBump.Value());
+    stop();
+    shaftEncodingStraight(-30,9);
+    shaftEncodingTurnRight(30,175);
+    check_heading(15);
+    goToX(28,25);
+    check_x_plus(28);
+    shaftEncodingTurnLeft(25,200);
+    check_heading(90);
     waitForMiddlePress();
-
-    //    while(senseLight() == NO_LIGHT){
-    //        LCD.WriteLine(senseLight());
-    //    }
-
-    drive(20);
-    while(frontLeftBump.Value() || frontRightBump.Value());
+    drive(100);
+    Sleep(2.5);
     stop();
 }
 
