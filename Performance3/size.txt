@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  41540	   3420	   4516	  49476	   c144	../Performance3.elf
+  39856	   3420	   4540	  47816	   bac8	../Performance3.elf
