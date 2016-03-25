@@ -11,14 +11,15 @@ DigitalInputPin frontRightBump(FEHIO::P0_4);
 DigitalInputPin backLeftBump(FEHIO::P2_2);
 DigitalInputPin backRightBump(FEHIO::P0_3);
 
-AnalogInputPin CDScell(FEHIO::P2_0);
+AnalogInputPin CDScell(FEHIO::P1_6);
+AnalogInputPin CDScellFront(FEHIO::P2_0);
 
-AnalogInputPin leftSensor(FEHIO::P1_2);
-AnalogInputPin middleSensor(FEHIO::P1_1);
+AnalogInputPin leftSensor(FEHIO::P1_4);
+AnalogInputPin middleSensor(FEHIO::P1_2);
 AnalogInputPin rightSensor(FEHIO::P1_0);
 
 FEHServo armServo(FEHServo::Servo0);
-FEHServo clawServo(FEHServo::Servo1);
+FEHServo clawServo(FEHServo::Servo2);
 
 FEHMotor rightMotor(FEHMotor::Motor1,12.0);
 FEHMotor leftMotor(FEHMotor::Motor0,12.0);
@@ -33,7 +34,7 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define LEFT_THRESHOLD 1.5
 #define MIDDLE_THRESHOLD 1.5
 #define RIGHT_THRESHOLD 1.5
-#define TURN_90_COUNTS 700
+#define TURN_90_COUNTS 300
 #define ENCODING_SPEED 40
 #define RED_BLUE_THRESHOLD .59
 #define NO_LIGHT_THRESHOLD 1.0
@@ -42,6 +43,7 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define NO_LIGHT 3
 
 void waitForMiddlePress() {
+    LCD.WriteLine("Waiting for middle press");
     while(!buttons.MiddlePressed()){}
     while(buttons.MiddlePressed()){}
 }
@@ -139,10 +141,12 @@ void followLine() {
 
 void alignOnLine() {
     if(leftSensor.Value()<LEFT_THRESHOLD){
-        rightMotor.SetPercent(18);
+        rightMotor.SetPercent(25);
+        leftMotor.Stop();
     }
     if(rightSensor.Value()<RIGHT_THRESHOLD){
-        leftMotor.SetPercent(18);
+        leftMotor.SetPercent(25);
+        rightMotor.Stop();
     }
     if(middleSensor.Value()<MIDDLE_THRESHOLD && rightSensor.Value()>RIGHT_THRESHOLD && leftSensor.Value()>LEFT_THRESHOLD){
         stop();
@@ -162,6 +166,20 @@ int senseLight() {
         light = NO_LIGHT;
     }
 }
+
+int senseLightFront() {
+    int light;
+    if(CDScellFront.Value() < RED_BLUE_THRESHOLD) {
+        light = RED_LIGHT;
+    }
+    else if(CDScellFront.Value() > RED_BLUE_THRESHOLD && CDScellFront.Value() < NO_LIGHT_THRESHOLD) {
+        light = BLUE_LIGHT;
+    }
+    else {
+        light = NO_LIGHT;
+    }
+}
+
 
 void printLight(){
     switch (senseLight()) {
@@ -252,11 +270,11 @@ void checkHeading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (heading-startPoint < 180){
-                turnLeft(9);
+                turnLeft(22);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             } else {
-                turnRight(9);
+                turnRight(22);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -264,11 +282,11 @@ void checkHeading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
-                turnRight(9);
+                turnRight(22);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }else {
-                turnLeft(9);
+                turnLeft(22);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -298,14 +316,16 @@ void goToY(double yCoord, int percent) {
 /*BUMP SWITCHES*/
 void alignFront() {
     while(frontLeftBump.Value() && frontRightBump.Value());
+    stop();
     while(frontLeftBump.Value() || frontRightBump.Value()){
         if(frontLeftBump.Value()){
-            leftMotor.SetPercent(15);
+            leftMotor.SetPercent(40);
         }
         if(frontRightBump.Value()){
-            rightMotor.SetPercent(15);
+            rightMotor.SetPercent(40);
         }
     }
+    Sleep(1.5);
     stop();
 }
 
@@ -316,17 +336,47 @@ int main(void) {
 //    LCD.WriteLine(RPS.Heading());
     //waitForMiddlePress();
 
-    armServo.TouchCalibrate();
-    waitForMiddlePress();
-    clawServo.TouchCalibrate();
-    waitForMiddlePress();
+//    clawServo.TouchCalibrate();
+//    waitForMiddlePress();
+//    clawServo.TouchCalibrate();
+//    waitForMiddlePress();
 
-    armServo.SetMin(500);
-    armServo.SetMax(2500);
+    armServo.SetMin(898);
+    armServo.SetMax(1899);
+    clawServo.SetMin(500);
+    clawServo.SetMax(1645);
+    clawServo.SetDegree(20);
+    armServo.SetDegree(10);
 
-    armServo.SetDegree(60);
-    Sleep(1.0);
-    armServo.SetDegree(120);
+    int degree = 20;
+    while(true){
+        clawServo.SetDegree(degree);
+        while(!buttons.MiddlePressed()){
+            if(buttons.LeftPressed()){
+                degree--;
+                LCD.WriteLine(degree);
+                Sleep(.1);
+            }
+            if(buttons.RightPressed()){
+                degree++;
+                LCD.WriteLine(degree);
+                Sleep(.1);
+            }
+        }
+    }
+
+//    while(true){
+//        waitForMiddlePress();
+//        LCD.Write("OnLine: ");
+//        LCD.WriteLine(onLine());
+//        LCD.Write("Left: ");
+//        LCD.WriteLine(leftSensor.Value());
+//        LCD.Write("Middle: ");
+//        LCD.WriteLine(middleSensor.Value());
+//        LCD.Write("Right: ");
+//        LCD.WriteLine(rightSensor.Value());
+//        waitForMiddlePress();
+//    }
 
 //    while(true){
 //        if (onLine()){
