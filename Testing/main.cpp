@@ -345,10 +345,14 @@ int main(void) {
     armServo.SetMax(1899);
     clawServo.SetMin(500);
     clawServo.SetMax(1645);
-    clawServo.SetDegree(20);
-    armServo.SetDegree(10);
+    clawServo.SetDegree(40);
+    armServo.SetDegree(5);
 
-    int degree = 20;
+    while(true){
+        drive(-30);
+    }
+
+    int degree = 40;
     while(true){
         clawServo.SetDegree(degree);
         while(!buttons.MiddlePressed()){

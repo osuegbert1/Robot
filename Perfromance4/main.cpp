@@ -43,7 +43,7 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define NO_LIGHT 3
 #define DEFAULT_ARM_ANGLE 90
 #define DEFAULT_CLAW_ANGLE 180
-#define CHECK_HEADING_SPEED 23
+#define CHECK_HEADING_SPEED 23.5
 
 /*TESTING*/
 void waitForMiddlePress() {
@@ -349,31 +349,38 @@ int main(void) {
 //    LCD.Write("OnLine: ");
 //    LCD.WriteLine(onLine());
 
-    while(senseLight() == NO_LIGHT){
+    while(CDScell.Value() > 1.2){
         LCD.WriteLine(senseLight());
     }
 
     //waitForMiddlePress();
-    goToX(25.5,34.5);
-    checkXPlus(25.5);
+    goToX(26.1,35);
+    checkXPlus(26.1);
 
     shaftEncodingTurnLeft(50,180);
-    checkHeading(90);
+    checkHeading(89);
 
     //waitForMiddlePress();
-    rightMotor.SetPercent(51);
-    leftMotor.SetPercent(50);
-    while(RPS.Y()<38);
+    rightMotor.SetPercent(60);
+    leftMotor.SetPercent(62);
+    clearCounts();
+    while(updateCount()<1200 && RPS.Y()<37);
+    drive(25);
+    while(RPS.Y()<37);
     stop();
-    checkHeading(89);
+    checkHeading(88.5);
     armServo.SetDegree(180);
 
     //waitForMiddlePress();
-    drive(20);
-    while(RPS.Y()<58){
+    rightMotor.SetPercent(20);
+    leftMotor.SetPercent(21.3);
+    while(RPS.Y()<57.8){
         LCD.Write("X-Coord: ");
         LCD.WriteLine(RPS.X());
     }
+    stop();
+    turnLeft(20);
+    Sleep(.25);
     stop();
     checkHeading(90);
 
@@ -389,10 +396,10 @@ int main(void) {
         //waitForMiddlePress();
         shaftEncodingStraight(-20,9);
         checkHeading(90);
-        armServo.SetDegree(12);
-        clawServo.SetDegree(20);
+        armServo.SetDegree(5);
+        clawServo.SetDegree(37);
         Sleep(1.0);
-        drive(20);
+        drive(18);
         Sleep(1.0);
         stop();
         Sleep(5.5);
@@ -405,14 +412,16 @@ int main(void) {
     LCD.Clear(BLACK);
 
     //waitForMiddlePress();
-    shaftEncodingTurnLeft(30,700);
-    checkHeading(270);
+    shaftEncodingTurnLeft(30,400);
+    shaftEncodingStraight(20,1.5);
+    shaftEncodingTurnLeft(30,380);
+    checkHeading(269);
     drive(30);
     while(RPS.Y() > 22);
     checkYMinus(21);
     stop();
-    shaftEncodingTurnRight(25,180);
-    checkHeading(199);
+    shaftEncodingTurnRight(25,200);
+    checkHeading(207);
 
     //waitForMiddlePress();
     drive(25);
