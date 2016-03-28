@@ -36,19 +36,23 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define RIGHT_THRESHOLD 1.5
 #define TURN_90_COUNTS 300
 #define ENCODING_SPEED 40
-#define RED_BLUE_THRESHOLD .59
-#define NO_LIGHT_THRESHOLD 1.0
+#define RED_BLUE_THRESHOLD .66
+#define NO_LIGHT_THRESHOLD 1.8
 #define RED_LIGHT 1
 #define BLUE_LIGHT 2
 #define NO_LIGHT 3
+#define DEFAULT_ARM_ANGLE 90
+#define DEFAULT_CLAW_ANGLE 180
+#define CHECK_HEADING_SPEED 23.5
 
+/*TESTING*/
 void waitForMiddlePress() {
     LCD.WriteLine("Waiting for middle press");
     while(!buttons.MiddlePressed()){}
     while(buttons.MiddlePressed()){}
 }
 
-
+/*MISCELANEOUS*/
 void drive(int percent){
     rightMotor.SetPercent(percent);
     leftMotor.SetPercent(1+percent);
@@ -206,13 +210,13 @@ void checkXPlus(float x_coordinate) //using RPS while robot is in the +x directi
         LCD.WriteLine(RPS.X());
         if(RPS.X() > x_coordinate)
         {
-            drive(-12);
+            drive(-18);
             while(RPS.X() < x_coordinate - .5 || RPS.X() > x_coordinate + .5);
             stop();
         }
         else if(RPS.X() < x_coordinate)
         {
-            drive(12);
+            drive(18);
             while(RPS.X() < x_coordinate - .5 || RPS.X() > x_coordinate + .5);
             stop();
         }
@@ -227,13 +231,13 @@ void checkYMinus(float y_coordinate) //using RPS while robot is in the -y direct
         LCD.WriteLine(RPS.Y());
         if(RPS.Y() > y_coordinate)
         {
-            drive(12);
+            drive(18);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
         else if(RPS.Y() < y_coordinate)
         {
-            drive(-12);
+            drive(-18);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
@@ -248,13 +252,13 @@ void checkYPlus(float y_coordinate) //using RPS while robot is in the +y directi
         LCD.WriteLine(RPS.Y());
         if(RPS.Y() > y_coordinate)
         {
-            drive(-12);
+            drive(-18);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
         else if(RPS.Y() < y_coordinate)
         {
-            drive(12);
+            drive(18);
             while(RPS.Y() < y_coordinate - .5 || RPS.Y() > y_coordinate + .5);
             stop();
         }
@@ -270,11 +274,11 @@ void checkHeading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (heading-startPoint < 180){
-                turnLeft(22);
+                turnLeft(CHECK_HEADING_SPEED);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             } else {
-                turnRight(22);
+                turnRight(CHECK_HEADING_SPEED);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -282,11 +286,11 @@ void checkHeading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
-                turnRight(22);
+                turnRight(CHECK_HEADING_SPEED);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }else {
-                turnLeft(22);
+                turnLeft(CHECK_HEADING_SPEED);
                 while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
                 stop();
             }
@@ -330,32 +334,19 @@ void alignFront() {
 }
 
 int main(void) {
-    //Initialize the screen
-//    RPS.InitializeTouchMenu();
-//    LCD.Write("Heading: ");
-//    LCD.WriteLine(RPS.Heading());
-    //waitForMiddlePress();
-
-//    clawServo.TouchCalibrate();
-//    waitForMiddlePress();
-//    clawServo.TouchCalibrate();
-//    waitForMiddlePress();
+    LCD.Clear(BLACK);
 
     armServo.SetMin(898);
     armServo.SetMax(1899);
     clawServo.SetMin(500);
     clawServo.SetMax(1645);
-    clawServo.SetDegree(40);
-    armServo.SetDegree(5);
+    clawServo.SetDegree(100);
+    armServo.SetDegree(23);
 
-    while(true){
-        drive(-30);
-    }
 
-    int degree = 40;
-    while(true){
-        clawServo.SetDegree(degree);
-        while(!buttons.MiddlePressed()){
+    int degree = 23;
+    while(!buttons.MiddlePressed()){
+        armServo.SetDegree(degree);
             if(buttons.LeftPressed()){
                 degree--;
                 LCD.WriteLine(degree);
@@ -367,7 +358,18 @@ int main(void) {
                 Sleep(.1);
             }
         }
-    }
+    clawServo.SetDegree(100);
+    armServo.SetDegree(23);
+
+    Sleep(1.0);
+    armServo.SetDegree(8);
+    shaftEncodingStraight(20,1);
+    Sleep(1.0);
+    clawServo.SetDegree(DEFAULT_CLAW_ANGLE+2);
+    armServo.SetDegree(30);
+    Sleep(.2);
+    shaftEncodingStraight(-20,3);
+
 
 //    while(true){
 //        waitForMiddlePress();
