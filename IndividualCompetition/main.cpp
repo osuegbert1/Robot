@@ -6,7 +6,7 @@
 #include <FEHServo.h>
 #include <stdlib.h>
 
-DigitalInputPin frontLeftBump(FEHIO::P2_3);
+DigitalInputPin frontLeftBump(FEHIO::P0_6);
 DigitalInputPin frontRightBump(FEHIO::P0_4);
 DigitalInputPin backLeftBump(FEHIO::P2_2);
 DigitalInputPin backRightBump(FEHIO::P0_3);
@@ -36,13 +36,14 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define RIGHT_THRESHOLD 1.5
 #define TURN_90_COUNTS 300
 #define ENCODING_SPEED 40
-#define RED_BLUE_THRESHOLD .66
-#define NO_LIGHT_THRESHOLD 1.8
+#define RED_BLUE_THRESHOLD .6
+#define NO_LIGHT_THRESHOLD 1.95
 #define RED_LIGHT 1
 #define BLUE_LIGHT 2
 #define NO_LIGHT 3
 #define DEFAULT_ARM_ANGLE 90
 #define DEFAULT_CLAW_ANGLE 180
+#define ARM_TO_SWITCH_ANGLE 60
 #define CHECK_HEADING_SPEED 20.5
 
 /*TESTING*/
@@ -74,6 +75,7 @@ void stop() {
     Sleep(.5);
 }
 
+
 /*SHAFT ENCODING*/
 void clearCounts() {
     rightEncoder.ResetCounts();
@@ -91,7 +93,8 @@ void shaftEncodingStraight(int percent, double distance)
     clearCounts();
     drive(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -103,7 +106,8 @@ void shaftEncodingTurnLeft(int percent, int counts)
     clearCounts();
     turnLeft(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -115,7 +119,8 @@ void shaftEncodingTurnRight(int percent, int counts)
     clearCounts();
     turnRight(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -265,21 +270,46 @@ void checkYPlus(float y_coordinate) //using RPS while robot is in the +y directi
     }
 }
 
+bool detectStopped(){
+    bool stopped = false;
+    int counts = updateCount();
+    Sleep(.15);
+    if(updateCount()-counts == 0){
+        stopped = true;
+    }
+    return stopped;
+}
+
 void checkHeading(float heading) //using RPS
 {
     double startPoint = RPS.Heading();
 
     while(RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5){
+        int speed = CHECK_HEADING_SPEED;
         if (heading - startPoint > 0 ){
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (heading-startPoint < 180){
                 turnLeft(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnLeft(speed);
+                }
                 stop();
             } else {
                 turnRight(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnRight(speed);
+                }
                 stop();
             }
         } else {
@@ -287,11 +317,25 @@ void checkHeading(float heading) //using RPS
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
                 turnRight(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnRight(speed);
+                }
                 stop();
             }else {
                 turnLeft(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnLeft(speed);
+                }
                 stop();
             }
         }
@@ -317,16 +361,75 @@ void goToY(double yCoord, int percent) {
     stop();
 }
 
+void driveAlongXtoYminus(int percent, double xCoord, double yCoord){
+    drive(percent);
+    int time = TimeNow();
+    while(RPS.Y()> yCoord && TimeNow()-time < 15){
+        LCD.Write("X: ");
+        LCD.Write(RPS.X());
+        LCD.Write("    Y: ");
+        LCD.WriteLine(RPS.Y());
+        if(RPS.X() < xCoord -.5){
+            rightMotor.SetPercent(percent+2*percent);
+            Sleep(.25);
+            rightMotor.SetPercent(percent);
+            leftMotor.SetPercent(percent+2*percent);
+            Sleep(.25);
+            drive(percent);
+            checkHeading(270);
+        }
+        else if(RPS.X() > xCoord +.5){
+            leftMotor.SetPercent(percent+2*percent);
+            Sleep(.25);
+            leftMotor.SetPercent(percent);
+            rightMotor.SetPercent(percent+2*percent);
+            Sleep(.25);
+            drive(percent);
+            checkHeading(270);
+        }
+        else{
+            drive(percent);
+        }
+    }
+    drive(percent);
+}
+
+void driveAlongXtoYplus(int percent, double xCoord, double yCoord){
+    int time = TimeNow();
+    while(RPS.Y() < yCoord && TimeNow() - time < 15){
+        LCD.Write("X: ");
+        LCD.Write(RPS.X());
+        LCD.Write("    Y: ");
+        LCD.WriteLine(RPS.Y());
+        if(RPS.X()<xCoord-.75){
+            shaftEncodingTurnRight(30,80);
+            goToX(xCoord,percent);
+            shaftEncodingTurnLeft(30,80);
+            checkHeading(90);
+        }
+        else if(RPS.X()>xCoord+.75){
+            shaftEncodingTurnLeft(30,50);
+            goToX(xCoord,percent);
+            shaftEncodingTurnRight(30,50);
+            checkHeading(90);
+        }
+        else{
+            drive(percent);
+        }
+    }
+    drive(percent);
+}
+
 /*BUMP SWITCHES*/
 void alignFront() {
     while(frontLeftBump.Value() && frontRightBump.Value());
     stop();
     while(frontLeftBump.Value() || frontRightBump.Value()){
         if(frontLeftBump.Value()){
-            leftMotor.SetPercent(40);
+            leftMotor.SetPercent(50);
         }
         if(frontRightBump.Value()){
-            rightMotor.SetPercent(40);
+            rightMotor.SetPercent(50);
         }
     }
     Sleep(1.5);
@@ -342,7 +445,7 @@ void prepForSupplies(){
 void pickUpSupplies(){
     armServo.SetDegree(8);
     shaftEncodingStraight(20,1);
-    Sleep(1.0);
+    Sleep(.5);
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE+2);
     armServo.SetDegree(30);
     Sleep(.2);
@@ -350,7 +453,7 @@ void pickUpSupplies(){
 }
 
 
-/*MAIN----------------------------------------------------------------*/
+/*-------------------MAIN--------------------------------------------------------*/
 int main(void) {
     LCD.Clear(BLACK);
 
@@ -359,89 +462,169 @@ int main(void) {
     clawServo.SetMin(500);
     clawServo.SetMax(1645);
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
-    armServo.SetDegree(DEFAULT_ARM_ANGLE);
+    armServo.SetDegree(122);
 
     RPS.InitializeTouchMenu();
     LCD.Write("Heading: ");
     LCD.WriteLine(RPS.Heading());
-//    LCD.Write("OnLine: ");
-//    LCD.WriteLine(onLine());
-//    int time = TimeNow();
-//    while(CDScell.Value() > 1.2 && TimeNow() - time <= 60){
-//        LCD.WriteLine(senseLight());
-//    }
+    LCD.Write("OnLine: ");
+    LCD.WriteLine(onLine());
+    int time = TimeNow();
+    while(CDScell.Value() > 1.35 && TimeNow() - time <= 35){
+        LCD.WriteLine(senseLight());
+    }
 
 
-    goToX(26.5,25);
-    checkXPlus(26.5);
-    shaftEncodingTurnRight(25,300);
-    checkHeading(270);
+    /*SWITCHES*/
+    double yBeforeSwitch = 18;
+    /*WHITE SWITCH*/
+    drive(35);
+    Sleep(7.0);
+    stop();
+    shaftEncodingStraight(-30,7);
+//    /*RED SWITCH*/
+//    shaftEncodingTurnLeft(35,75);
+//    checkHeading(105);
+//    drive(20);
+//    Sleep(5.5);
+//    stop();
+//    drive(-20);
+//    Sleep(2.5);
+//    shaftEncodingTurnRight(35,150);
+//    checkHeading(75);
+//    drive(20);
+//    Sleep(5.5);
+//    stop();
+//    drive(-20);
+//    Sleep(2.5);
+//    stop();
+    //    shaftEncodingStraight(20,3);
+    //    shaftEncodingTurnRight(30,50);
+    //    checkHeading(90);
+    //    driveAlongXtoYplus(20,2,yBeforeSwitch);
+    //    checkHeading(90);
+//    drive(18);
+//    Sleep(1.75);
+//    stop();
+//    shaftEncodingStraight(-30,11);
+//    /*BLUE SWITCH*/
+//    shaftEncodingTurnRight(30,100);
+//    shaftEncodingStraight(20,4);
+//    shaftEncodingTurnLeft(30,100);
+//    checkHeading(90);
+//    driveAlongXtoYplus(20,9,yBeforeSwitch);
+//    drive(18);
+//    Sleep(1.75);
+//    stop();
+//    shaftEncodingStraight(-30,11);
+    turnRight(40);
+    while(RPS.Heading()>6);
+    stop();
+
+    goToX(23.8,30);
+    checkXPlus(23.8);
+    shaftEncodingTurnRight(30,350);
+    checkHeading(275);
     prepForSupplies();
-    drive(15);
-    while(RPS.Y()>18);
-    stop();
-    waitForMiddlePress();
-    pickUpSupplies();
-
-
-    while(true);
-
-
-    //waitForMiddlePress();
-    goToX(26.1,35);
-    checkXPlus(26.1);
-
-    shaftEncodingTurnLeft(50,180);
-    checkHeading(89);
-
-    //waitForMiddlePress();
-    rightMotor.SetPercent(60);
-    leftMotor.SetPercent(62);
-    clearCounts();
-    while(updateCount()<1200 && RPS.Y()<37);
-    drive(25);
-    while(RPS.Y()<37);
-    stop();
-    checkHeading(88.5);
-    armServo.SetDegree(180);
-
-    //waitForMiddlePress();
-    rightMotor.SetPercent(20);
-    leftMotor.SetPercent(21.3);
-    while(RPS.Y()<57.8){
+    drive(20);
+    while(RPS.Y()>18){
         LCD.Write("X-Coord: ");
         LCD.WriteLine(RPS.X());
     }
     stop();
-    turnLeft(20);
-    Sleep(.25);
-    stop();
+
+    pickUpSupplies();
+
+
+    shaftEncodingTurnRight(30,100);
+    shaftEncodingStraight(20,1);
+
+    /*DROP SUPPLIES*/
+    armServo.SetDegree(10);
+    Sleep(.5);
+    clawServo.SetDegree(30);
+    Sleep(.5);
+    armServo.SetDegree(DEFAULT_ARM_ANGLE);
+    clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
+
+    shaftEncodingTurnRight(30,500);
     checkHeading(90);
 
-    if(senseLightFront() == BLUE_LIGHT){
+    driveAlongXtoYplus(20,28.3,18);
+    stop();
+    //waitForMiddlePress();
+
+    rightMotor.SetPercent(60);
+    leftMotor.SetPercent(61);
+    clearCounts();
+    while(updateCount()<1300 && RPS.Y()<37);
+    drive(25);
+    while(RPS.Y()<37);
+    stop();
+    armServo.SetDegree(180);
+
+    //waitForMiddlePress();
+
+
+    driveAlongXtoYplus(20,29.3,56.7);
+    //    drive(20);
+    //    rightMotor.SetPercent(20);
+    //    leftMotor.SetPercent(21.3);
+    //    while(RPS.Y()<57.8){
+    //        LCD.Write("X-Coord: ");
+    //        LCD.WriteLine(RPS.X());
+    //    }
+    stop();
+    //    turnLeft(20);
+    //    Sleep(.25);
+    //    stop();
+    checkHeading(90);
+
+    /*PRESS FUEL BUTTON*/
+//    if(senseLightFront() == RED_LIGHT){
+//        LCD.SetBackgroundColor(RED);
+//        //waitForMiddlePress();
+//        shaftEncodingStraight(-20,9);
+//        checkHeading(90);
+//        armServo.SetDegree(5);
+//        clawServo.SetDegree(34.5);
+//        Sleep(1.0);
+//        drive(22);
+//        Sleep(1.6);
+//        stop();
+//        Sleep(5.5);
+//    } else {
         LCD.SetBackgroundColor(BLUE);
         //waitForMiddlePress();
         drive(25);
         Sleep(1.5);
         stop();
         Sleep(5.5);
-    } else {
-        LCD.SetBackgroundColor(RED);
-        //waitForMiddlePress();
-        shaftEncodingStraight(-20,9);
-        checkHeading(90);
-        armServo.SetDegree(5);
-        clawServo.SetDegree(37);
-        Sleep(1.0);
-        drive(18);
-        Sleep(1.0);
-        stop();
-        Sleep(5.5);
-    }
+        shaftEncodingStraight(-20,5);
+    //}
 
-    shaftEncodingStraight(-20,7);
-    armServo.SetDegree(190);
+    armServo.SetDegree(DEFAULT_ARM_ANGLE);
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
+
+    shaftEncodingStraight(-20,9);
+    //    armServo.SetDegree(150);
+    //    clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
+    //    shaftEncodingTurnLeft(35,360);
+    //    checkHeading(180);
+    //    drive(35);
+    //    alignFront();
+    //    shaftEncodingStraight(-25,6);
+    //    shaftEncodingTurnLeft(25,335);
+    //    drive(25);
+    //    alignFront();
+
+    //    shaftEncodingStraight(-20,5);
+    //    clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
+    //    armServo.SetDegree(ARM_TO_SWITCH_ANGLE);
+    //    shaftEncodingStraight(20,3);
+    //    armServo.SetDegree(150);
+    //    shaftEncodingTurnRight(25,80);
+    //waitForMiddlePress();
 
     LCD.Clear(BLACK);
 
@@ -452,14 +635,13 @@ int main(void) {
     checkHeading(269);
     drive(30);
     while(RPS.Y() > 22);
-    checkYMinus(21);
+    checkYMinus(22);
     stop();
     shaftEncodingTurnRight(25,200);
-    checkHeading(207);
+    checkHeading(200);
 
     //waitForMiddlePress();
     drive(25);
 
 }
-
 

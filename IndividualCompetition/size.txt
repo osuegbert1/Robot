@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  49480	   3424	   5640	  58544	   e4b0	../IndividualCompetition.elf
+  53176	   3424	   5640	  62240	   f320	../IndividualCompetition.elf
