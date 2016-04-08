@@ -4,9 +4,10 @@
 #include <FEHMotor.h>
 #include <FEHRPS.h>
 #include <FEHServo.h>
+#include <FEHBattery.h>
 #include <stdlib.h>
 
-DigitalInputPin frontLeftBump(FEHIO::P2_3);
+DigitalInputPin frontLeftBump(FEHIO::P0_6);
 DigitalInputPin frontRightBump(FEHIO::P0_4);
 DigitalInputPin backLeftBump(FEHIO::P2_2);
 DigitalInputPin backRightBump(FEHIO::P0_3);
@@ -36,14 +37,15 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define RIGHT_THRESHOLD 1.5
 #define TURN_90_COUNTS 300
 #define ENCODING_SPEED 40
-#define RED_BLUE_THRESHOLD .66
-#define NO_LIGHT_THRESHOLD 1.8
+#define RED_BLUE_THRESHOLD .6
+#define NO_LIGHT_THRESHOLD 1.95
 #define RED_LIGHT 1
 #define BLUE_LIGHT 2
 #define NO_LIGHT 3
 #define DEFAULT_ARM_ANGLE 90
 #define DEFAULT_CLAW_ANGLE 180
-#define CHECK_HEADING_SPEED 21.5
+#define ARM_TO_SWITCH_ANGLE 60
+#define CHECK_HEADING_SPEED 23
 
 /*TESTING*/
 void waitForMiddlePress() {
@@ -74,6 +76,7 @@ void stop() {
     Sleep(.5);
 }
 
+
 /*SHAFT ENCODING*/
 void clearCounts() {
     rightEncoder.ResetCounts();
@@ -91,7 +94,8 @@ void shaftEncodingStraight(int percent, double distance)
     clearCounts();
     drive(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -103,7 +107,8 @@ void shaftEncodingTurnLeft(int percent, int counts)
     clearCounts();
     turnLeft(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -115,7 +120,8 @@ void shaftEncodingTurnRight(int percent, int counts)
     clearCounts();
     turnRight(percent);
 
-    while(updateCount() < counts){
+    int time = TimeNow();
+    while(updateCount() < counts && TimeNow()- time < 8){
         LCD.WriteLine(updateCount());
     }
 
@@ -265,21 +271,46 @@ void checkYPlus(float y_coordinate) //using RPS while robot is in the +y directi
     }
 }
 
+bool detectStopped(){
+    bool stopped = false;
+    int counts = updateCount();
+    Sleep(.15);
+    if(updateCount()-counts == 0){
+        stopped = true;
+    }
+    return stopped;
+}
+
 void checkHeading(float heading) //using RPS
 {
     double startPoint = RPS.Heading();
 
     while(RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5){
+        int speed = CHECK_HEADING_SPEED;
         if (heading - startPoint > 0 ){
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             if (heading-startPoint < 180){
                 turnLeft(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnLeft(speed);
+                }
                 stop();
             } else {
                 turnRight(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnRight(speed);
+                }
                 stop();
             }
         } else {
@@ -287,11 +318,25 @@ void checkHeading(float heading) //using RPS
             LCD.WriteLine(RPS.Heading());
             if (startPoint-heading < 180) {
                 turnRight(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnRight(speed);
+                }
                 stop();
             }else {
                 turnLeft(CHECK_HEADING_SPEED);
-                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2);
+                while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+                    if(detectStopped()){
+                        speed++;
+                    } else {
+                        speed = CHECK_HEADING_SPEED;
+                    }
+                    turnLeft(speed);
+                }
                 stop();
             }
         }
@@ -301,7 +346,8 @@ void checkHeading(float heading) //using RPS
 
 void goToX(double xCoord, int percent) {
     drive(percent);
-    while(RPS.X() < xCoord-1 || RPS.X() > xCoord+1){
+    int time = TimeNow();
+    while(RPS.X() < xCoord-1 || RPS.X() > xCoord+1 && TimeNow() - time < 7){
         LCD.Write("X Coord: ");
         LCD.WriteLine(RPS.X());
     }
@@ -319,28 +365,57 @@ void goToY(double yCoord, int percent) {
 
 void driveAlongXtoYminus(int percent, double xCoord, double yCoord){
     drive(percent);
-    while(RPS.Y()> yCoord){
+    int time = TimeNow();
+    while(RPS.Y()> yCoord && TimeNow()-time < 15){
         LCD.Write("X: ");
         LCD.Write(RPS.X());
         LCD.Write("    Y: ");
         LCD.WriteLine(RPS.Y());
-        if(RPS.X() < xCoord -.5){
-            rightMotor.SetPercent(percent+2*percent);
-            Sleep(.25);
-            rightMotor.SetPercent(percent);
-            leftMotor.SetPercent(percent+2*percent);
-            Sleep(.25);
-            drive(percent);
+        if(RPS.X() < xCoord - 1){
+            double preTurnX = RPS.X();
+            shaftEncodingTurnLeft(30,80);
+            double xAdjust = preTurnX - RPS.X();
+            goToX(xCoord-xAdjust, percent);
+            shaftEncodingTurnRight(30,80);
             checkHeading(270);
         }
-        else if(RPS.X() > xCoord +.5){
-            leftMotor.SetPercent(percent+2*percent);
-            Sleep(.25);
-            leftMotor.SetPercent(percent);
-            rightMotor.SetPercent(percent+2*percent);
-            Sleep(.25);
-            drive(percent);
+        else if(RPS.X() > xCoord + 1){
+            double preTurnX = RPS.X();
+            shaftEncodingTurnRight(30,80);
+            double xAdjust = RPS.X() - preTurnX;
+            goToX(xCoord+xAdjust, percent);
+            shaftEncodingTurnLeft(30,80);
             checkHeading(270);
+        }
+        else{
+            drive(percent);
+        }
+    }
+    drive(percent);
+}
+
+void driveAlongXtoYplus(int percent, double xCoord, double yCoord){
+    int time = TimeNow();
+    while(RPS.Y() < yCoord && TimeNow() - time < 15){
+        LCD.Write("X: ");
+        LCD.Write(RPS.X());
+        LCD.Write("    Y: ");
+        LCD.WriteLine(RPS.Y());
+        if(RPS.X()<xCoord - 1){
+            double preTurnX = RPS.X();
+            shaftEncodingTurnRight(30,80);
+            double xAdjust = preTurnX - RPS.X();
+            goToX(xCoord-xAdjust,percent);
+            shaftEncodingTurnLeft(30,80);
+            checkHeading(90);
+        }
+        else if(RPS.X()>xCoord + 1){
+            double preTurnX = RPS.X();
+            shaftEncodingTurnLeft(30,80);
+            double xAdjust = RPS.X() - preTurnX;
+            goToX(xCoord+xAdjust,percent);
+            shaftEncodingTurnRight(30,80);
+            checkHeading(90);
         }
         else{
             drive(percent);
@@ -355,10 +430,10 @@ void alignFront() {
     stop();
     while(frontLeftBump.Value() || frontRightBump.Value()){
         if(frontLeftBump.Value()){
-            leftMotor.SetPercent(40);
+            leftMotor.SetPercent(50);
         }
         if(frontRightBump.Value()){
-            rightMotor.SetPercent(40);
+            rightMotor.SetPercent(50);
         }
     }
     Sleep(1.5);
@@ -373,12 +448,63 @@ void prepForSupplies(){
 
 void pickUpSupplies(){
     armServo.SetDegree(8);
-    shaftEncodingStraight(20,1);
-    Sleep(.5);
+    drive(25);
+    Sleep(1.0);
+    stop();
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE+2);
     armServo.SetDegree(30);
     Sleep(.2);
-    shaftEncodingStraight(-20,3);
+    shaftEncodingStraight(-28,3);
+}
+
+void initialize(double &suppliesY, double &suppliesX, double &rampY, double &rampX, double &fuelLightX, double &fuelLightY){
+    RPS.InitializeTouchMenu();
+    LCD.Clear(BLACK);
+    LCD.Write("Voltage: ");
+    LCD.Write(Battery.Voltage());
+    LCD.WriteLine("/11.5");
+    LCD.WriteLine("");
+    LCD.Write("Heading: ");
+    LCD.WriteLine(RPS.Heading());
+
+    prepForSupplies();
+    LCD.WriteLine("ALIGN TO SUPPLIES");
+    while(!buttons.MiddlePressed());
+    suppliesX = RPS.X();
+    suppliesY = RPS.Y();
+    LCD.Write("X-Coord: ");
+    LCD.WriteLine(RPS.X());
+    LCD.Write("Y-Coord: ");
+    LCD.WriteLine(RPS.Y());
+    while(!buttons.MiddleReleased());
+    Sleep(.2);
+    armServo.SetDegree(DEFAULT_ARM_ANGLE);
+    clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
+    LCD.WriteLine("ALIGN TO RAMP");
+    while(!buttons.MiddlePressed());
+    rampX = RPS.X();
+    rampY = RPS.Y();
+    LCD.Write("X-Coord: ");
+    LCD.WriteLine(RPS.X());
+    LCD.Write("Y-Coord: ");
+    LCD.WriteLine(RPS.Y());
+    while(!buttons.MiddleReleased());
+    Sleep(.2);
+    armServo.SetDegree(180);
+    LCD.WriteLine("ALIGN TO FUEL LIGHT");
+    while(!buttons.MiddlePressed());
+    fuelLightX = RPS.X();
+    fuelLightY = RPS.Y();
+    LCD.Write("X-Coord: ");
+    LCD.WriteLine(RPS.X());
+    LCD.Write("Y-Coord: ");
+    LCD.WriteLine(RPS.Y());
+    while(!buttons.MiddleReleased());
+    Sleep(.2);
+    LCD.SetBackgroundColor(GREEN);
+    LCD.WriteLine("PRESS MIDDLE BUTTON TO ARM");
+    while(!buttons.MiddlePressed());
+    while(!buttons.MiddleReleased());
 }
 
 int main(void) {
@@ -395,24 +521,31 @@ int main(void) {
 //        LCD.Write("Heading: ");
 //        LCD.WriteLine(RPS.Heading());
 
-        while(true){
-            LCD.WriteLine("Drive Straight");
-            waitForMiddlePress();
-            drive(25);
-            waitForMiddlePress();
-            stop();
-            LCD.WriteLine("Turn Left");
-            waitForMiddlePress();
-            turnLeft(30);
-            waitForMiddlePress();
-            stop();
-            LCD.WriteLine("Turn Right");
-            waitForMiddlePress();
-            turnRight(30);
-            waitForMiddlePress();
-            stop();
+//    while(true){
+//        while(buttons.MiddleReleased());
+//        LCD.WriteLine(CDScell.Value());
+//        while(buttons.MiddlePressed());
+//    }
 
-        }
+
+//        while(true){
+//            LCD.WriteLine("Drive Straight");
+//            waitForMiddlePress();
+//            drive(25);
+//            waitForMiddlePress();
+//            stop();
+//            LCD.WriteLine("Turn Left");
+//            waitForMiddlePress();
+//            turnLeft(30);
+//            waitForMiddlePress();
+//            stop();
+//            LCD.WriteLine("Turn Right");
+//            waitForMiddlePress();
+//            turnRight(30);
+//            waitForMiddlePress();
+//            stop();
+
+//        }
 
     //    while(true){
     //        driveAlongXtoYminus(15,28.2,18);
@@ -421,7 +554,7 @@ int main(void) {
     //    }
 
     int armDegree = 23;
-    int clawDegree = DEFAULT_CLAW_ANGLE;
+    int clawDegree = DEFAULT_CLAW_ANGLE+2;
     while(true){
         LCD.WriteLine("ARM");
         while(!buttons.MiddlePressed()){

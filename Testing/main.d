@@ -14,8 +14,8 @@
  C:\fehqt\Proteus/EWL/EWL_C/include/ewl_lib_ext1.h Libraries/FEHUtility.h \
  Startup/derivative.h Libraries/LCDColors.h Libraries/FEHIO.h \
  Drivers/adc16.h Libraries/FEHMotor.h Libraries/FEHRPS.h \
- Drivers/FEHXBee.h Libraries/FEHServo.h \
- C:\fehqt\Proteus/EWL/EWL_C/include/stdlib.h \
+ Drivers/FEHXBee.h Libraries/FEHServo.h Libraries/FEHBattery.h \
+ Libraries/FEHIO.h C:\fehqt\Proteus/EWL/EWL_C/include/stdlib.h \
  C:\fehqt\Proteus/EWL/EWL_C/include/cstdlib \
  C:\fehqt\Proteus/EWL/EWL_C/include/div_t.h \
  C:\fehqt\Proteus/EWL/EWL_C/include/null.h \
@@ -71,6 +71,10 @@ Libraries/FEHRPS.h:
 Drivers/FEHXBee.h:
 
 Libraries/FEHServo.h:
+
+Libraries/FEHBattery.h:
+
+Libraries/FEHIO.h:
 
 C:\fehqt\Proteus/EWL/EWL_C/include/stdlib.h:
 

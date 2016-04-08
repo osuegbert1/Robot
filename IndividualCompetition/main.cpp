@@ -470,7 +470,7 @@ int main(void) {
     LCD.Write("OnLine: ");
     LCD.WriteLine(onLine());
     int time = TimeNow();
-    while(CDScell.Value() > 1.35 && TimeNow() - time <= 35){
+    while(CDScell.Value() > 1.35 && TimeNow() - time <= 33){
         LCD.WriteLine(senseLight());
     }
 
