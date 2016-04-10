@@ -37,15 +37,15 @@ ButtonBoard buttons(FEHIO::Bank3);
 #define RIGHT_THRESHOLD 1.5
 #define TURN_90_COUNTS 300
 #define ENCODING_SPEED 40
-#define RED_BLUE_THRESHOLD .6
-#define NO_LIGHT_THRESHOLD 1.95
+#define RED_BLUE_THRESHOLD .7
+#define NO_LIGHT_THRESHOLD 1.85
 #define RED_LIGHT 1
 #define BLUE_LIGHT 2
 #define NO_LIGHT 3
 #define DEFAULT_ARM_ANGLE 90
 #define DEFAULT_CLAW_ANGLE 180
 #define ARM_TO_SWITCH_ANGLE 60
-#define CHECK_HEADING_SPEED 21.8
+#define CHECK_HEADING_SPEED 21.5
 
 /*TESTING*/
 void waitForMiddlePress() {
@@ -54,7 +54,7 @@ void waitForMiddlePress() {
     while(buttons.MiddlePressed()){}
 }
 
-/*MISCELANEOUS*/
+/*CORE DRIVE FUNCTIONS*/
 void drive(int percent){
     rightMotor.SetPercent(percent);
     leftMotor.SetPercent(1+percent);
@@ -284,13 +284,13 @@ bool detectStopped(){
 void checkHeading(float heading) //using RPS
 {
     double startPoint = RPS.Heading();
-    while(RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5){
+    while(RPS.Heading() < heading - 2.7 || RPS.Heading() > heading + 2.7){
         int speed = CHECK_HEADING_SPEED;
-        if (heading - startPoint > 0 && heading - startPoint < 180 || heading - startPoint <=0 && startPoint - heading >= 180){
+        if ((heading - startPoint > 0 && heading - startPoint < 180) || (heading - startPoint <=0 && startPoint - heading >= 180)){
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             turnLeft(CHECK_HEADING_SPEED);
-            while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+            while(RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5){
                 if(detectStopped()){
                     speed++;
                 } else {
@@ -303,13 +303,15 @@ void checkHeading(float heading) //using RPS
             LCD.Write("Heading: ");
             LCD.WriteLine(RPS.Heading());
             turnRight(CHECK_HEADING_SPEED);
-            while(RPS.Heading() < heading - 2 || RPS.Heading() > heading + 2){
+            int counts = 0;
+            while((RPS.Heading() < heading - 2.5 || RPS.Heading() > heading + 2.5) && counts < 600){
                 if(detectStopped()){
                     speed++;
                 } else {
                     speed = CHECK_HEADING_SPEED;
                 }
                 turnRight(speed);
+                counts++;
             }
             stop();
         }
@@ -550,8 +552,8 @@ int main(void) {
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
 
     /*RAMP*/
-    shaftEncodingTurnRight(40,500);
-    checkHeading(91.5);
+    shaftEncodingTurnRight(40,550);
+    checkHeading(90);
 
     driveAlongXtoYplus(25,rampX,rampY);
     stop();
@@ -599,13 +601,22 @@ int main(void) {
 
     /*GO DOWN RAMP*/
     shaftEncodingTurnLeft(40,400);
-    shaftEncodingStraight(30,1.3);
+    shaftEncodingStraight(30,.8);
     shaftEncodingTurnLeft(40,320);
     checkHeading(270);
     armServo.SetDegree(240);
     drive(40);
-    while(RPS.Y() > 23);
-    checkYMinus(23);
+    while(RPS.Y() > 22){
+        if(numberOfBumpsPressed() > 0){
+            stop();
+            shaftEncodingStraight(-30,6);
+            shaftEncodingTurnLeft(40,100);
+            shaftEncodingStraight(30,3.5);
+            shaftEncodingTurnRight(40,100);
+            checkHeading(270);
+        }
+    }
+    checkYMinus(22);
     stop();
 
     /*FINAL BUTTON*/
@@ -614,5 +625,11 @@ int main(void) {
 
     drive(45);
 
+    /*FAILSAFE FOR END BUTTON*/
+    while(numberOfBumpsPressed() == 0);
+    Sleep(.75);
+    shaftEncodingStraight(-40,5);
+    shaftEncodingTurnRight(40,50);
+    drive(45);
 }
 

@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  36340	   3424	   5640	  45404	   b15c	../Testing.elf
+  46388	   3424	   5640	  55452	   d89c	../Testing.elf

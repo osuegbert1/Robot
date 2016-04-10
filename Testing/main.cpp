@@ -515,17 +515,42 @@ int main(void) {
     clawServo.SetMin(500);
     clawServo.SetMax(1645);
     clawServo.SetDegree(DEFAULT_CLAW_ANGLE);
-    armServo.SetDegree(DEFAULT_ARM_ANGLE);
+    armServo.SetDegree(180);
 
-//        RPS.InitializeTouchMenu();
-//        LCD.Write("Heading: ");
-//        LCD.WriteLine(RPS.Heading());
+        RPS.InitializeTouchMenu();
+        LCD.Write("Heading: ");
+        LCD.WriteLine(RPS.Heading());
 
-//    while(true){
-//        while(buttons.MiddleReleased());
-//        LCD.WriteLine(CDScell.Value());
-//        while(buttons.MiddlePressed());
-//    }
+
+    while(true){
+        LCD.WriteLine("Light");
+        while(!buttons.MiddlePressed()){
+            if(buttons.LeftPressed()){
+                LCD.Write("Middle Light: ");
+                LCD.WriteLine(CDScell.Value());
+                Sleep(.5);
+            }
+            if(buttons.RightPressed()){
+                LCD.Write("Front Light: ");
+                LCD.WriteLine(CDScellFront.Value());
+                Sleep(.5);
+            }
+        }
+        Sleep(1.0);
+        LCD.WriteLine("RPS");
+        while(!buttons.MiddlePressed()){
+            if(buttons.RightPressed()){
+                LCD.Write("X: ");
+                LCD.WriteLine(RPS.X());
+                LCD.Write("Y: ");
+                LCD.WriteLine(RPS.Y());
+                LCD.Write("Heading: ");
+                LCD.WriteLine(RPS.Heading());
+                Sleep(.5);
+            }
+        }
+        Sleep(1.0);
+    }
 
 
 //        while(true){

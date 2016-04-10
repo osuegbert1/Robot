@@ -1,2 +1,2 @@
    text	   data	    bss	    dec	    hex	filename
-  56400	   3424	   5640	  65464	   ffb8	../FinalCompetition.elf
+  56720	   3424	   5640	  65784	  100f8	../FinalCompetition.elf
